@@ -37,17 +37,12 @@ Basic Usage
 import magpy.magma
 
 class DihedralD3(magpy.Magma):
-    def cayley_table(self):
-        return [[0,1,2,3,4,5],
-                [1,0,4,5,2,3],
-                [2,5,0,4,3,1],
-                [3,4,5,0,1,2],
-                [4,3,1,2,5,0],
-                [5,2,3,1,0,4]]
-    def order(self):
-        return 6
-    def magma_set(self):
-        return set([0,1,2,3,4,5])
+    CAYLEY_TABLE =[[0,1,2,3,4,5],
+                  [1,0,4,5,2,3],
+                  [2,5,0,4,3,1],
+                  [3,4,5,0,1,2],
+                  [4,3,1,2,5,0],
+                  [5,2,3,1,0,4]]
 
 ```
 
