@@ -13,6 +13,19 @@
 #
 
 from abc import ABCMeta, abstractproperty, abstractmethod
+from pymonad import Maybe, Just, Nothing
+
+class MetaClass:
+    def __init__(cls, name, bases, dictionary):
+        if name is not 'Parent':
+                self.validate_subclass(subclass)
+        super().__init__(name, bases, dictionary)
+
+    @staticmethod
+    def validate_subclass(subclass):
+        instance = subclass()  # Must instantiate an object to test its attributes
+        if instance.cayley == Nothing: 
+            raise RuntimeException('Subclass fails validation')
 
 class abstractstatic(staticmethod):
     __slots__ = ()
@@ -21,20 +34,21 @@ class abstractstatic(staticmethod):
         function.__isabstractmethod__ = True
     __isabstractmethod__ = True
 
-class Magma(metaclass=ABCMeta):
+class Magma(metaclass=MetaClass):
 
 	## options ##
 	usegreek = False
 	greek = ['α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω']
 	usecustomcharset = False
 	customcharset = []
-	identity = [] # [] if none, populated by one number if has inverse. Maybe monad?
+	cayley = Nothing
+	identity = Nothing
 
 
-	@abstractstatic
-	def cayley_table(self):
-		""" """
-		return []
+	#@abstractstatic
+	#def cayley_table(self):
+	#	""" """
+	#	return []
 
 	@abstractstatic
 	def order(self):
@@ -102,8 +116,8 @@ class Magma(metaclass=ABCMeta):
 		""" """
 		for x in range(self.order()):
 			if(self.isIdentity(self.__class__(x))):
-				if(len(self.identity) == 0):
-					self.identity.append(x)
+				if(self.identity == Nothing):
+					self.identity = Just(x)
 				return True
 		return False
 
@@ -116,11 +130,11 @@ class Magma(metaclass=ABCMeta):
 
 	def hasInverse(self,x):
 		""" """
-		if(not len(self.identity) == 1):
+		if(self.identity == Nothing):
 			return False
 		else:
 			for y in range(self.order()):
-				if(x + self.__class__(y) == self.__class__(self.identity[0])):
+				if(x + self.__class__(y) == self.__class__(self.identity.getValue())):
 					return True
 			return False
 
@@ -252,9 +266,9 @@ class Magma(metaclass=ABCMeta):
 		""" ((XX)Y)X = (XX)(YX) """
 		for _x in range(self.order()):
 			for _y in range(self.order()):
-				x = self.class(_x)
-				y = self.class(_y)
-				if(not ((x+x)+y)+x == (x+x)+(y+x))):
+				x = self.__class__(_x)
+				y = self.__class__(_y)
+				if(not ((x+x)+y)+x == (x+x)+(y+x) ):
 					return False
 		return True
 
@@ -278,7 +292,7 @@ class Magma(metaclass=ABCMeta):
 					x = self.__class__(_x)
 					y = self.__class__(_y)
 					z = self.__class__(_z)
-					if(not y+(z+(y+x) == (y+(z+y))+x):
+					if(not y+(z+(y+x)) == (y+(z+y))+x):
 						return False
 		return True
 
@@ -311,7 +325,7 @@ class Magma(metaclass=ABCMeta):
 			for _y in range(self.order()):
 				x = self.__class__(_x)
 				y = self.__class__(_x)
-				if(not (x+(x+y) == y && self.is_commut())):
+				if(not (x+(x+y) == y and self.is_commut())):
 					return False
 		return True
 
