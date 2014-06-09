@@ -9,7 +9,7 @@ setup(
     download_url = 'https://github.com/Sintrastes/magpy.git',
     author_email = 'nabedell@liberty.edu',
     version = '0.1',
-    install_requires = ['abc','pymonad'],
+    install_requires = ['pymonad'],
     packages = ['magpy'],
     scripts = [],
     name = 'magpy',

@@ -1,3 +1,4 @@
+
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
@@ -12,62 +13,106 @@
 # usage information.
 #
 
-from abc import ABCMeta, abstractproperty, abstractmethod
 from pymonad import Maybe, Just, Nothing
 
-class MetaClass:
-    def __init__(cls, name, bases, dictionary):
-        if name is not 'Parent':
-                self.validate_subclass(subclass)
-        super().__init__(name, bases, dictionary)
+class MagmaMeta(type):
+    """ A metaclass used to control how the instantiation of Magma subclasses behaves. This essentially
+		makes the Magma class an abstract base class, but I need more control than the abc library provides,
+		so I created this custom metaclass. """
+    def __new__(cls, name, parents, dct):
+        # Check that Magma instances are valid.
+        if name is not 'Magma':
+            if 'CAYLEY_TABLE' not in dct:
+                raise Exception("Cannot create Magma instance without CAYLEY_TABLE")
+            else:
+                # Check for square CAYLEY_TABLE
+                for row in dct['CAYLEY_TABLE']:
+                    if not len(row) == len(dct['CAYLEY_TABLE']):
+                        raise Exception("CAYLEY_TABLE must be a square array")
+                # Create SET and ORDER from CAYLEY_TABLE
+                dct['SET'] = set([])
+                for rows in dct['CAYLEY_TABLE']:
+                    for x in rows:
+                        dct['SET'].add(x)
+                dct['ORDER'] = len(dct['SET'])
+        return super(MagmaMeta, cls).__new__(cls, name, parents, dct)
 
-    @staticmethod
-    def validate_subclass(subclass):
-        instance = subclass()  # Must instantiate an object to test its attributes
-        if instance.cayley == Nothing: 
-            raise RuntimeException('Subclass fails validation')
+class Magma(metaclass=MagmaMeta):
+	"""
+Magma is an abstract base class used to represent the algebraic structure known as a magma,
+which is simply a set, and a binary operator (+) that maps two values in the set to another
+value in the set. 
 
-class abstractstatic(staticmethod):
-    __slots__ = ()
-    def __init__(self, function):
-        super(abstractstatic, self).__init__(function)
-        function.__isabstractmethod__ = True
-    __isabstractmethod__ = True
+The Magma class used the static constant CAYLEY_TABLE to define how the binary operator works,
+CAYLEY_TABLE is a two dimensional array that represents the result of the binary operator.
 
-class Magma(metaclass=MetaClass):
+By convention, the row number corresponds to the value on the left side of the binary operator,
+and the column number corresponds to the value on the right. e.a. for a+b=c, a is the row number,
+c is the column number, and c is the result of the operation.
+
+The row and column numbers are also 0-indexed, e.a. the 1st column is actually, the 0th column,
+the 2nd column is actually the 1st column... 
+		
+*****BASIC USAGE*****:
+
+To create a new magma class with a Cayley table, use the following syntax:
+ 
+class DihedralD3(magpy.Magma):
+	CAYLEY_TABLE == [[0,1,2,3,4,5],
+			[1,0,4,5,2,3],
+			[2,5,0,4,3,1],
+			[3,4,5,0,1,2],
+			[4,3,1,2,5,0],
+			[5,2,3,1,0,4]]
+
+To instantiate a magma class, use this syntax:
+
+d = DihedralD3(2) 
+
+Finally, to use the binary operator of the magma, simply use "+"
+
+d + d
+	"""
 
 	## options ##
 	usegreek = False
-	greek = ['α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω']
+	use_eabc = False
 	usecustomcharset = False
+
+	## Charsets ##
+    #
+	# Used in the display of individual values of magmas, and the display of a
+	# magma's CAYLEY_TABLE. Customizable with the charset options.
+    #
+
 	customcharset = []
-	cayley = Nothing
-	identity = Nothing
+	greek = ['α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω']
+	eabc = ['e','a','b','c','d','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
 
+	### Constant Static Variables ###
+    #
+    # These must be given values (other than the default) in subclasses of Magma in order
+    # for those subclasses to be valid. These values are CONSTANTS for subclasses of Magma,
+    # and should not be modified after the class has been instantiated.
+    #
 
-	#@abstractstatic
-	#def cayley_table(self):
-	#	""" """
-	#	return []
+	CAYLEY_TABLE = []
+	SET = set([])
+	ORDER = 0 
 
-	@abstractstatic
-	def order(self):
-		""" """
-		return 0
-
-	@abstractstatic
-	def magma_set(self):
-		""" """
-		return set([])
+	# 
+	__identity = Nothing
 
 	def __init__(self,n):
-		if(n in self.magma_set()):
+		if self.__class__.__name__ == 'Magma':
+			raise NotImplementedError("Magma is an abstract base class, it must be instantiated before use. See help(Magma) for more information.")
+		if(n in self.SET):
 			self.n = n
 		else:
 			raise Exception("Invalid argument.")
 
 	def __add__(x,y):
-		new = x.__class__(x.cayley_table()[x.n][y.n])
+		new = x.__class__(x.CAYLEY_TABLE[x.n][y.n])
 		if(x.usegreek == True or y.usegreek == True):
 			new.usegreek = True
 		return new
@@ -93,8 +138,8 @@ class Magma(metaclass=MetaClass):
 			return "error"
 	def is_commut(self):
 		""" Checks to see if x + y = y + x for all x and y in the magma. """
-		for x in range(self.order()):
-			for y in range(self.order()):
+		for x in range(self.ORDER):
+			for y in range(self.ORDER):
 				if(self.__class__(x) + self.__class__(y) == self.__class__(y) + self.__class__(x)):
 					pass
 				else:
@@ -103,9 +148,9 @@ class Magma(metaclass=MetaClass):
 
 	def is_assoc(self):
 		""" """
-		for x in range(self.order()):
-			for y in range(self.order()):
-				for z in range(self.order()):
+		for x in range(self.ORDER):
+			for y in range(self.ORDER):
+				for z in range(self.ORDER):
 					if( (self.__class__(x) + self.__class__(y)) + self.__class__(z) == self.__class__(x) + (self.__class__(y) + self.__class__(z)) ):
 						pass
 					else:
@@ -114,7 +159,7 @@ class Magma(metaclass=MetaClass):
 
 	def hasIdentity(self):
 		""" """
-		for x in range(self.order()):
+		for x in range(self.ORDER):
 			if(self.isIdentity(self.__class__(x))):
 				if(self.identity == Nothing):
 					self.identity = Just(x)
@@ -123,7 +168,7 @@ class Magma(metaclass=MetaClass):
 
 	def isIdentity(self,e):
 		""" """
-		for x in range(self.order()):
+		for x in range(self.ORDER):
 			if(not self.__class__(x) + e == self.__class__(x)):
 				return False
 		return True
@@ -133,14 +178,14 @@ class Magma(metaclass=MetaClass):
 		if(self.identity == Nothing):
 			return False
 		else:
-			for y in range(self.order()):
+			for y in range(self.ORDER):
 				if(x + self.__class__(y) == self.__class__(self.identity.getValue())):
 					return True
 			return False
 
 	def isInvertable(self):
 		""" """
-		for x in range(self.order()):
+		for x in range(self.ORDER):
 			if(not self.hasInverse(self.__class__(x))):
 				return False
 		return True
@@ -179,9 +224,9 @@ class Magma(metaclass=MetaClass):
 
 	def isSelfDistributive(self):
 		""" Returns true if all of the elements of the magma satisfy the self distributive property. """
-		for x in range(self.order()):
-			for y in range(self.order()):
-				for z in range(self.order()):
+		for x in range(self.ORDER):
+			for y in range(self.ORDER):
+				for z in range(self.ORDER):
 					if(not self.__class__(x) + (self.__class__(y) + self.__class__(z)) == (self.__class__(x) + self.__class__(y)) + (self.__class__(x) + self.__class__(z)) ):
 						return False
 		return True
@@ -189,9 +234,9 @@ class Magma(metaclass=MetaClass):
 	def __rackProperty__(self):
 		""" for all a, b, there exists exactly one c such that a * c = b """		
 		count = 0 # number of c
-		for a in range(self.order()):
-			for b in range(self.order()):
-				for c in range(self.order()):
+		for a in range(self.ORDER):
+			for b in range(self.ORDER):
+				for c in range(self.ORDER):
 					if (self.__class__(a) + self.__class__(c) == self.__class__(b)):
 						count = count + 1
 					if (count > 1):
@@ -226,7 +271,7 @@ class Magma(metaclass=MetaClass):
 	def isIdempotent(self): # Could I use functional programming to make this simpler?
 		""" Tests to see if mag obeys the indepotent property for all x.
 		∀xϵmag(x * x = x) """
-		for row in self.cayley_table():
+		for row in self.CAYLEY_TABLE:
 			for x in row:
 				if((self.__class__(x) + self.__class__(x)) == self.__class__(x)):
 					pass
@@ -240,10 +285,10 @@ class Magma(metaclass=MetaClass):
 
 	def isParamedial(self):
 		""" """
-		for _x in range(self.order()):
-			for _y in range(self.order()):
-				for _a in range(self.order()):
-					for _b in range(self.order()):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _a in range(self.ORDER):
+					for _b in range(self.ORDER):
 						x = self.__class_(_x)
 						y =	self.__class_(_y)
 						a = self.__class_(_a)
@@ -254,8 +299,8 @@ class Magma(metaclass=MetaClass):
 
 	def isFlexible(self):
 		""" X*(Y*X) = (X*Y)*X """
-		for _x in range(self.order()):
-			for _y in range(self.order()):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
 				if(not x+(y+x) == (x+y)+x):
@@ -264,8 +309,8 @@ class Magma(metaclass=MetaClass):
 
 	def isJordan(self):
 		""" ((XX)Y)X = (XX)(YX) """
-		for _x in range(self.order()):
-			for _y in range(self.order()):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
 				if(not ((x+x)+y)+x == (x+x)+(y+x) ):
@@ -286,9 +331,9 @@ class Magma(metaclass=MetaClass):
 
 	def isLeftBol(self):
 		""" Y(Z(YX)) = (Y(ZY))X """
-		for _x in range(self.order()):
-			for _y in range(self.order()):
-				for _z in range(self.order()):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _z in range(self.ORDER):
 					x = self.__class__(_x)
 					y = self.__class__(_y)
 					z = self.__class__(_z)
@@ -305,8 +350,8 @@ class Magma(metaclass=MetaClass):
 
 	def isRightInvoulntary():
 		""" (XY)Y = X """
-		for _x in range(self.order()):
-			for _y in range(self.order()):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
 				if(not (x+y)+y == x):
@@ -321,8 +366,8 @@ class Magma(metaclass=MetaClass):
 
 	def isSteiner(self):
 		""" """
-		for _x in range(self.order()):
-			for _y in range(self.order()):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_x)
 				if(not (x+(x+y) == y and self.is_commut())):
@@ -342,10 +387,10 @@ class Magma(metaclass=MetaClass):
 
 	def isMedial(self):
 		""" Returns true if the agma satisfies the medial law (x*y)*(u*v) = (x*u)*(y*v). """
-		for _x in range(self.order()):
-			for _y in range(self.order()):
-				for _u in range(self.order()):
-					for _v in range(self.order()):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _u in range(self.ORDER):
+					for _v in range(self.ORDER):
 						x = self.__class__(_x)
 						y = self.__class__(_y)
 						u = self.__class__(_u)
