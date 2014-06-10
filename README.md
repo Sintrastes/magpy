@@ -9,6 +9,7 @@ Features
 * Create magmas by instantiating the abstract base class `magpy.Magma`.
 * Compute values and test the properties of magmas.
 * Customize the character set used to display the value of magmas, unicode supported.
+* Use either * or + to represent the binary magma operator.
 
 Planned Features
 ---------------
@@ -48,7 +49,8 @@ class DihedralD3(magpy.Magma):
 
 **Using magma objects**: There are currentley no static methods for determining properties of a magma, so magmas must be instantiated with an object before these methods (like .isGroup()) may be used.
 
-Magmas curentley use `+` as the group operation. Later versions may provide the option of using other operators such as `*` instead.
+Magmas curentley use `*` as the group operation by default. the `setMagmaOperator()` method can be used to change this 
+class wide.
 
 ```python
 d = DihedralD3(2)
@@ -59,10 +61,10 @@ d.isGroup()
 d.isQuandle()
 > False
 
-d + d
+d * d
 > 0
 
-d + 3
+d * 3
 > 5
 
 ```

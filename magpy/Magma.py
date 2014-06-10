@@ -9,8 +9,8 @@
 #
 # This file contains the Magma abstract base class, which allows the user to instantiate a
 # derived class representing a magma with a cayley table, order, and set of elements in the
-# magma. The + operator is used for the binary magma operation. See readme.md for more 
-# usage information.
+# magma. By default the * operator is used for the binary magma operation. See readme.md for
+# more usage information.
 #
 
 from pymonad import Maybe, Just, Nothing
@@ -41,14 +41,14 @@ class MagmaMeta(type):
 class Magma(metaclass=MagmaMeta):
 	"""
 Magma is an abstract base class used to represent the algebraic structure known as a magma,
-which is simply a set, and a binary operator (+) that maps two values in the set to another
+which is simply a set, and a binary operator (* by default) that maps two values in the set to another
 value in the set. 
 
 The Magma class used the static constant CAYLEY_TABLE to define how the binary operator works,
 CAYLEY_TABLE is a two dimensional array that represents the result of the binary operator.
 
 By convention, the row number corresponds to the value on the left side of the binary operator,
-and the column number corresponds to the value on the right. e.a. for a+b=c, a is the row number,
+and the column number corresponds to the value on the right. e.a. for a*b=c, a is the row number,
 c is the column number, and c is the result of the operation.
 
 The row and column numbers are also 0-indexed, e.a. the 1st column is actually, the 0th column,
@@ -70,15 +70,32 @@ To instantiate a magma class, use this syntax:
 
 d = DihedralD3(2) 
 
-Finally, to use the binary operator of the magma, simply use "+"
+Finally, to use the binary operator of the magma, simply use "*"
+
+d * d
+
+Currently the binary operator may be either + or * depending on user preference. To
+change the binary operator you want to use, call the method setMagmaOperator() on
+any object in the magma class in question. Pass the method "add" to set the operation
+to + class wide, and "mult" to set the operation as * class wide.
+
+Using the declared class and object from above:
+
+d.setMagmaOperator("add")
 
 d + d
+
+Note: Internally, & is used as the representation of the magma operator, this allows
+all of the methods using the magma operator to work regardless of whether + or * is
+being used at the magma operation.
+ 
 	"""
 
 	## options ##
 	usegreek = False
 	use_eabc = False
 	usecustomcharset = False
+	__magma_operator = 'mult'
 
 	## Charsets ##
     #
@@ -112,11 +129,31 @@ d + d
 		else:
 			raise Exception("Invalid argument.")
 
-	def __add__(x,y):
-		new = x.__class__(x.CAYLEY_TABLE[x.n][y.n])
-		if(x.usegreek == True or y.usegreek == True):
+	def magmaOp(self,x):
+		new = self.__class__(self.CAYLEY_TABLE[self.n][x.n])
+		if(self.usegreek == True or x.usegreek == True):
 			new.usegreek = True
 		return new
+
+	def setMagmaOperator(self,op):
+		if op == "mult":
+			self.__class__.__magma_operator = "mult"
+		elif op == "add":
+			self.__class__.__magma_operator = "add"
+		else:
+			print("Please use either \"mult\" or \"add\" for the magma operator (default is mult).")
+
+	def __and__(x,y):
+		""" Used as an internal symbol for representation of the magma operator. """
+		return x.magmaOp(y)
+
+	def __add__(x,y):
+		if(x.__class__.__magma_operator == "add"):
+			return x.__and__(y)
+
+	def __mul__(x,y):
+		if(x.__class__.__magma_operator == "mult"):
+			return x.__and__(y)
 
 	def __eq__(x,y): # ==
 		if x.n == y.n:
@@ -131,13 +168,14 @@ d + d
 			return self.greek[self.n]
 		else:
 			return "error"
+
 	def isCommutative(self):
 		""" Checks to see if x + y = y + x for all x and y in the magma. """
 		for _x in range(self.ORDER):
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
-				if(x + y == y + x):
+				if(x & y == y & x):
 					pass
 				else:
 					return False
@@ -151,7 +189,7 @@ d + d
 					x = self.__class__(_x)
 					y = self.__class__(_y)
 					z = self.__class__(_z)
-					if( (x + y) + z == x + (y + z) ):
+					if( (x & y) & z == x & (y & z) ):
 						pass
 					else:
 						return False
@@ -170,7 +208,7 @@ d + d
 		""" """
 		for _x in range(self.ORDER):
 			x = self.__class__(_x)
-			if(not x + e == x):
+			if(not x & e == x):
 				return False
 		return True
 
@@ -182,7 +220,7 @@ d + d
 			for _y in range(self.ORDER):
 				y = self.__class__(_y)
 				e = self.__class__(self.__identity.getValue())
-				if(x + y == e):
+				if(x & y == e):
 					return True
 			return False
 
@@ -222,18 +260,18 @@ d + d
 		else:
 			return False
 
-	def isMoufangLoop():
+	def isMoufangLoop(self):
 		""" """
 		for _x in range(self.ORDER):
 			for _y in range(self.ORDER):
 				for _z in range(self.ORDER):
-					if not z(x(zy)) == ((z+x)+z)+y:
+					if not z(x(zy)) == ((z&x)&z)&y:
 						return False
-					if not x+(z+(y+z)) == ((x+z)+y)+z:
+					if not x&(z&(y&z)) == ((x&z)&y)&z:
 						return False
-					if not (z+x)+(y+z) == (z+(x+y))+z:
+					if not (z&x)&(y&z) == (z&(x&y))&z:
 						return False
-					if not (z+x)+(y+z) == z+((x+y)+z):
+					if not (z&x)&(y&z) == z&((x&y)&z):
 						return False
 		return True
 
@@ -245,7 +283,7 @@ d + d
 					x = self.__class__(_x)
 					y = self.__class__(_y)
 					z = self.__class__(_z)
-					if(not x + (y + z) == (x + y) + (x + z) ):
+					if(not x & (y & z) == (x & y) & (x & z) ):
 						return False
 		return True
 
@@ -258,7 +296,7 @@ d + d
 					a = self.__class__(_a)
 					b = self.__class__(_b)
 					c = self.__class__(_c)
-					if (a + c == b):
+					if (a & c == b):
 						count = count + 1
 					if (count > 1):
 						return False
@@ -287,7 +325,7 @@ d + d
 		for row in self.CAYLEY_TABLE:
 			for _x in row:
 				x = self.__class__(_x)
-				if(x + x == x):
+				if(x & x == x):
 					pass
 				else:
 					return False
@@ -303,11 +341,11 @@ d + d
 			for _y in range(self.ORDER):
 				for _a in range(self.ORDER):
 					for _b in range(self.ORDER):
-						x = self.__class_(_x)
-						y =	self.__class_(_y)
-						a = self.__class_(_a)
-						b = self.__class_(_b)
-						if(not (a+x)+(y+b) == (b+x)+(y+a)):
+						x = self.__class__(_x)
+						y =	self.__class__(_y)
+						a = self.__class__(_a)
+						b = self.__class__(_b)
+						if(not (a&x)&(y&b) == (b&x)&(y&a)):
 							return False
 		return True
 
@@ -317,7 +355,7 @@ d + d
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
-				if(not x+(y+x) == (x+y)+x):
+				if(not x&(y&x) == (x&y)&x):
 					return False
 		return True
 
@@ -327,7 +365,7 @@ d + d
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
-				if(not ((x+x)+y)+x == (x+x)+(y+x) ):
+				if(not ((x&x)&y)&x == (x&x)&(y&x) ):
 					return False
 		return True
 
@@ -341,7 +379,7 @@ d + d
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
-				if not (x+x)+y == x+(x+y) and x+(y+y) == (x+y)+y:
+				if not (x&x)&y == x&(x&y) and x&(y&y) == (x&y)&y:
 					return False
 		return True
 
@@ -353,7 +391,7 @@ d + d
 					x = self.__class__(_x)
 					y = self.__class__(_y)
 					z = self.__class__(_z)
-					if( ((x+y)+z)+x == x+(+y(z+x)) ):
+					if( ((x&y)&z)&x == x&(y&(z&x)) ):
 						return False
 		return True
 
@@ -365,7 +403,7 @@ d + d
 					x = self.__class__(_x)
 					y = self.__class__(_y)
 					z = self.__class__(_z)
-					if(not y+(z+(y+x)) == (y+(z+y))+x):
+					if(not y&(z&(y&x)) == (y&(z&y))&x):
 						return False
 		return True
 
@@ -377,7 +415,7 @@ d + d
 					x = self.__class__(_x)
 					y = self.__class__(_y)
 					z = self.__class__(_z)
-					if(not ((x+y)+z)+y == x+((y+z)+y) ):
+					if(not ((x&y)&z)&y == x&((y&z)&y) ):
 						return False
 		return True
 
@@ -405,7 +443,7 @@ d + d
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
-				if(not (x+y)+y == x):
+				if(not (x&y)&y == x):
 					return False
 
 	def isKei(self):
@@ -421,7 +459,7 @@ d + d
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_x)
-				if(not (x+(x+y) == y and self.isCommutative())):
+				if(not (x&(x&y) == y and self.isCommutative())):
 					return False
 		return True
 
@@ -446,7 +484,7 @@ d + d
 						y = self.__class__(_y)
 						u = self.__class__(_u)
 						v = self.__class__(_v)
-						if(not (x+y)+(u+v) == (x+u)+(y+v)):
+						if(not (x&y)&(u&v) == (x&u)&(y&v)):
 							return False
 		return True
 		
@@ -460,7 +498,7 @@ d + d
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_y)
-				if not (x+x)+y == (y+y)+x and (x+x)+y == x+x:
+				if not (x&x)&y == (y&y)&x and (x&x)&y == x&x:
 					return False
 		return True
 	
