@@ -14,6 +14,7 @@
 #
 
 from pymonad import Maybe, Just, Nothing
+from math import log
 
 class MagmaMeta(type):
     """ A metaclass used to control how the instantiation of Magma subclasses behaves. This essentially
@@ -128,30 +129,29 @@ d + d
 			return str(self.n)
 		elif self.usegreek:
 			return self.greek[self.n]
-			if self.n == 0:
-				return "α"
-			if self.n == 1:
-				return "β"
-			if self.n == 2:
-				return "γ"
 		else:
 			return "error"
-	def is_commut(self):
+	def isCommutative(self):
 		""" Checks to see if x + y = y + x for all x and y in the magma. """
-		for x in range(self.ORDER):
-			for y in range(self.ORDER):
-				if(self.__class__(x) + self.__class__(y) == self.__class__(y) + self.__class__(x)):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				x = self.__class__(_x)
+				y = self.__class__(_y)
+				if(x + y == y + x):
 					pass
 				else:
 					return False
 		return True
 
-	def is_assoc(self):
+	def isAssociative(self):
 		""" """
-		for x in range(self.ORDER):
-			for y in range(self.ORDER):
-				for z in range(self.ORDER):
-					if( (self.__class__(x) + self.__class__(y)) + self.__class__(z) == self.__class__(x) + (self.__class__(y) + self.__class__(z)) ):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _z in range(self.ORDER):
+					x = self.__class__(_x)
+					y = self.__class__(_y)
+					z = self.__class__(_z)
+					if( (x + y) + z == x + (y + z) ):
 						pass
 					else:
 						return False
@@ -161,38 +161,42 @@ d + d
 		""" """
 		for x in range(self.ORDER):
 			if(self.isIdentity(self.__class__(x))):
-				if(self.identity == Nothing):
-					self.identity = Just(x)
+				if(self.__identity == Nothing):
+					self.__identity = Just(x)
 				return True
 		return False
 
 	def isIdentity(self,e):
 		""" """
-		for x in range(self.ORDER):
-			if(not self.__class__(x) + e == self.__class__(x)):
+		for _x in range(self.ORDER):
+			x = self.__class__(_x)
+			if(not x + e == x):
 				return False
 		return True
 
 	def hasInverse(self,x):
 		""" """
-		if(self.identity == Nothing):
+		if(self.__identity == Nothing):
 			return False
 		else:
-			for y in range(self.ORDER):
-				if(x + self.__class__(y) == self.__class__(self.identity.getValue())):
+			for _y in range(self.ORDER):
+				y = self.__class__(_y)
+				e = self.__class__(self.__identity.getValue())
+				if(x + y == e):
 					return True
 			return False
 
 	def isInvertable(self):
 		""" """
-		for x in range(self.ORDER):
-			if(not self.hasInverse(self.__class__(x))):
+		for _x in range(self.ORDER):
+			x = self.__class__(_x)
+			if(not self.hasInverse(x)):
 				return False
 		return True
 
 	def isMonoid(self):
 		""" """
-		if(self.hasIdentity() and self.is_assoc()):
+		if(self.hasIdentity() and self.isAssociative()):
 			return True
 		else:
 			return False
@@ -206,7 +210,7 @@ d + d
 
 	def isAbeleanGroup(self):
 		""" """
-		if(self.isGroup() and self.is_commut()):
+		if(self.isGroup() and self.isCommutative()):
 			return True
 		else:
 			return False
@@ -220,24 +224,41 @@ d + d
 
 	def isMoufangLoop():
 		""" """
-		pass
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _z in range(self.ORDER):
+					if not z(x(zy)) == ((z+x)+z)+y:
+						return False
+					if not x+(z+(y+z)) == ((x+z)+y)+z:
+						return False
+					if not (z+x)+(y+z) == (z+(x+y))+z:
+						return False
+					if not (z+x)+(y+z) == z+((x+y)+z):
+						return False
+		return True
 
 	def isSelfDistributive(self):
 		""" Returns true if all of the elements of the magma satisfy the self distributive property. """
-		for x in range(self.ORDER):
-			for y in range(self.ORDER):
-				for z in range(self.ORDER):
-					if(not self.__class__(x) + (self.__class__(y) + self.__class__(z)) == (self.__class__(x) + self.__class__(y)) + (self.__class__(x) + self.__class__(z)) ):
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _z in range(self.ORDER):
+					x = self.__class__(_x)
+					y = self.__class__(_y)
+					z = self.__class__(_z)
+					if(not x + (y + z) == (x + y) + (x + z) ):
 						return False
 		return True
 
 	def __rackProperty__(self):
 		""" for all a, b, there exists exactly one c such that a * c = b """		
 		count = 0 # number of c
-		for a in range(self.ORDER):
-			for b in range(self.ORDER):
-				for c in range(self.ORDER):
-					if (self.__class__(a) + self.__class__(c) == self.__class__(b)):
+		for _a in range(self.ORDER):
+			for _b in range(self.ORDER):
+				for _c in range(self.ORDER):
+					a = self.__class__(_a)
+					b = self.__class__(_b)
+					c = self.__class__(_c)
+					if (a + c == b):
 						count = count + 1
 					if (count > 1):
 						return False
@@ -260,27 +281,20 @@ d + d
 		else:
 			return False
 
-	def isBiRack(self):
-		""" """
-		pass
-
-	def isBiQuandle(self):
-		""" """
-		print("test")
-
-	def isIdempotent(self): # Could I use functional programming to make this simpler?
+	def isIdempotent(self):
 		""" Tests to see if mag obeys the indepotent property for all x.
 		∀xϵmag(x * x = x) """
 		for row in self.CAYLEY_TABLE:
-			for x in row:
-				if((self.__class__(x) + self.__class__(x)) == self.__class__(x)):
+			for _x in row:
+				x = self.__class__(_x)
+				if(x + x == x):
 					pass
 				else:
 					return False
 		return True 
 	
 	def isSzasz(self):
-		""" """
+		""" A Szasz magma has exactly one nonassociative ordered triple of members of the magma. """
 		pass
 
 	def isParamedial(self):
@@ -323,11 +337,25 @@ d + d
 
 	def isAlternative(self):
 		""" (X*X)*Y = X*(X*Y) and X*(Y*Y) = (X*Y)*Y """
-		pass
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				x = self.__class__(_x)
+				y = self.__class__(_y)
+				if not (x+x)+y == x+(x+y) and x+(y+y) == (x+y)+y:
+					return False
+		return True
 
 	def isExtra(self):
 		""" ((XY)Z)X = X(Y(ZX)) """
-		pass
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _z in range(self.ORDER):
+					x = self.__class__(_x)
+					y = self.__class__(_y)
+					z = self.__class__(_z)
+					if( ((x+y)+z)+x == x+(+y(z+x)) ):
+						return False
+		return True
 
 	def isLeftBol(self):
 		""" Y(Z(YX)) = (Y(ZY))X """
@@ -341,9 +369,32 @@ d + d
 						return False
 		return True
 
+	def isRightBol(self):
+		""" ((XY)Z)Y = X((YZ)Y) """
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				for _z in range(self.ORDER):
+					x = self.__class__(_x)
+					y = self.__class__(_y)
+					z = self.__class__(_z)
+					if(not ((x+y)+z)+y == x+((y+z)+y) ):
+						return False
+		return True
+
+	def isQuasidihedral(self):
+		""" Returns true if the magma is quasidihedral, that is:
+			* It is a non-abelian group
+			* It has an order of 2^n """
+		if(self.isGroup() and \
+		  not self.isCommutative() and \
+		  log(self.ORDER,2).is_integer() ):
+			return True
+		else:
+			return False
+
 	def isBand(self):
 		""" """
-		if(self.is_assoc() and self.isIdempotent()):
+		if(self.isAssociative() and self.isIdempotent()):
 			return True
 		else:
 			return False
@@ -370,7 +421,7 @@ d + d
 			for _y in range(self.ORDER):
 				x = self.__class__(_x)
 				y = self.__class__(_x)
-				if(not (x+(x+y) == y and self.is_commut())):
+				if(not (x+(x+y) == y and self.isCommutative())):
 					return False
 		return True
 
@@ -386,7 +437,7 @@ d + d
 		pass
 
 	def isMedial(self):
-		""" Returns true if the agma satisfies the medial law (x*y)*(u*v) = (x*u)*(y*v). """
+		""" Returns true if the agma satisfies the medial law (x*y)*(u*v) = 		(x*u)*(y*v). """
 		for _x in range(self.ORDER):
 			for _y in range(self.ORDER):
 				for _u in range(self.ORDER):
@@ -405,10 +456,33 @@ d + d
 
 	def isZeropotent(self):
 		""" (X*X)*Y = (Y*Y)*X = X*X """
+		for _x in range(self.ORDER):
+			for _y in range(self.ORDER):
+				x = self.__class__(_x)
+				y = self.__class__(_y)
+				if not (x+x)+y == (y+y)+x and (x+x)+y == x+x:
+					return False
+		return True
+	
+	def isLeftSemimedial(self):
+		""" """
+		pass
+
+	def isRightSemimedial(self):
+		""" """
+		pass
+
+	def isSemimedial(self):
+		""" """
+		pass
+
+	def nucleus(self):
+		""" """
 		pass
 
 	def evaluate(self,expr):
-		""" Evaluates a string of symbols and letters or numbers representing the operator and symbols of the magma. """
+		""" Evaluates a string of symbols and letters or numbers representing the operator and symbols of the magma. 
+			(NOT YET IMPLEMENTED) """
 		if(self.usegreek):
 			# Tokenize with () first?
 			pass # Tokenize with ' ' and '*' or '+'.
@@ -419,7 +493,7 @@ d + d
 			pass
 
 def applyToAllOfOrder(f,n):
-	""" Applies f to all magmas of order n and returns a list of the results. """
+	""" Applies f to all magmas of order n and returns a list of the results. (NOT YET IMPLEMENTED) """
 	array = []
 	results = []
 
@@ -435,8 +509,4 @@ def applyToAllOfOrder(f,n):
 		for j in range(n):
 			array[i].append(0)
 
-	
-	
-# Idea: create a text interface for using this, so that things like alternate binary operators can be defined e.a. ▷ and ◁ ...
-# α, β, γ, δ, ζ, η, θ, etc...
-# ◇, ◆, ◊, ○, ◾, ◽ ...
+
